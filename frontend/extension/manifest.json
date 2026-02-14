@@ -5,7 +5,9 @@
   "description": "Your new AI Bot",
   "permissions": ["activeTab", "scripting"],
   "host_permissions": ["<all_urls>"],
-  "action": {},
+  "action": {
+    "default_popup": "popup.html"
+  },
   "icons": {},
   "background": {
     "service_worker": "script.js"
