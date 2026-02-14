@@ -99,7 +99,7 @@
     if (uncachedPosts.length > 0) {
       const imageUrls = uncachedPosts.map(post => post.imageUrl);
       const results = await mockBackendRequest(imageUrls);
-      
+
       results.forEach(result => {
         postCache.set(result.imageUrl, {
           aiGeneratedScore: result.aiGeneratedScore,
@@ -124,6 +124,8 @@
   }
   
   function hidePost(post) {
+    console.log(post)
+    
     if (post.element) {
       post.element.style.display = 'none';
       console.log('[AIBot Extension] Hiding post:', post.imageUrl.substring(0, 50) + '...');
