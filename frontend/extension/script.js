@@ -1,10 +1,10 @@
-function getAllPosts() {
-  const posts = document.querySelectorAll("post class");
-  return posts.map((post) => {
-    const imageUrl = post.querySelector("the image class").src;
-    const caption = post.querySelector("caption class");
-    return { imageUrl, caption };
-  });
+let getAllPosts = function() {
+    const posts = document.querySelectorAll("x78zum5 xdt5ytf x5yr21d xa1mljc xh8yej3 x1bs97v6 x1q0q8m5 x11aubdm xnc8uc2 x1qhh985");
+    return posts.map(post => {
+        const imageUrl = post.querySelector("x1n2onr6").src;
+        const caption = post.querySelector("_ap3a _aaco _aacu _aacx _aad7 _aade");
+        return { imageUrl, caption }
+    });
 }
 
 const postCache = new Map();
