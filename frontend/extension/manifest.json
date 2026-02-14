@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "name": "AIBot",
   "description": "Your new AI Bot",
-  "permissions": ["activeTab", "scripting", "storage"],
+  "permissions": ["activeTab", "scripting", "storage", "tabs"],
   "host_permissions": ["https://www.instagram.com/*"],
   "action": {
     "default_popup": "popup.html"

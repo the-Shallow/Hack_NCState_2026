@@ -52,6 +52,36 @@
       margin-bottom: 15px;
     }
     
+    .error-message {
+      background: rgba(255, 107, 107, 0.2);
+      border: 1px solid rgba(255, 107, 107, 0.5);
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      display: none;
+    }
+
+    .error-message h2 {
+      color: #ff6b6b;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    .error-message p {
+      color: #d1d1d1;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .content-section {
+      display: none;
+    }
+
+    .content-section.visible,
+    .error-message.visible {
+      display: block;
+    }
+
     .hidden-count {
       background: rgba(255, 255, 255, 0.1);
       border-radius: 8px;
@@ -130,27 +160,34 @@
     <div class="content">
       <h1>AIBot</h1>
       <p class="subtitle">Removing your fake AI News</p>
-      
-      <div class="hidden-count">
-        <p><span id="hiddenCount">0</span> AI Generated Fake News Hidden</p>
+
+      <div class="error-message" id="errorMessage">
+        <h2>Not on Instagram</h2>
+        <p>This extension only works on Instagram.com. Please navigate to Instagram to use this extension.</p>
       </div>
-      
-      <div class="threshold-section">
-        <div class="threshold-label">
-          <span>AI Generated Threshold</span>
-          <span class="threshold-value" id="aiThresholdValue">7</span>
+
+      <div class="content-section" id="contentSection">
+        <div class="hidden-count">
+          <p><span id="hiddenCount">0</span> AI Generated Fake News Hidden</p>
         </div>
-        <input type="range" id="aiThreshold" min="1" max="10" value="7">
-        <p class="threshold-description">Lower = more AI content removed</p>
-      </div>
-      
-      <div class="threshold-section">
-        <div class="threshold-label">
-          <span>News Threshold</span>
-          <span class="threshold-value" id="newsThresholdValue">5</span>
+
+        <div class="threshold-section">
+          <div class="threshold-label">
+            <span>AI Generated Threshold</span>
+            <span class="threshold-value" id="aiThresholdValue">7</span>
+          </div>
+          <input type="range" id="aiThreshold" min="1" max="10" value="7">
+          <p class="threshold-description">Lower = more AI content removed</p>
         </div>
-        <input type="range" id="newsThreshold" min="1" max="10" value="5">
-        <p class="threshold-description">Lower = more news posts removed</p>
+
+        <div class="threshold-section">
+          <div class="threshold-label">
+            <span>News Threshold</span>
+            <span class="threshold-value" id="newsThresholdValue">5</span>
+          </div>
+          <input type="range" id="newsThreshold" min="1" max="10" value="5">
+          <p class="threshold-description">Lower = more news posts removed</p>
+        </div>
       </div>
     </div>
   </div>
