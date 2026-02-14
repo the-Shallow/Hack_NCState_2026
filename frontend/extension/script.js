@@ -5,19 +5,63 @@
   const NEWS_THRESHOLD = 5;
   const SCROLL_DEBOUNCE_MS = 200;
   
-  console.log('[AIBot Extension] Content script loaded on Instagram');
   
+  console.log('[AIBot Extension] Content script loaded on Instagram');
+
   function getAllPosts() {
     const posts = document.querySelectorAll('article');
     console.log(`[AIBot Extension] Found ${posts.length} article elements`);
     
     const mappedPosts = Array.from(posts).map((post, index) => {
-      const img = post.querySelector('img[srcset]');
+      // Try multiple image selectors in order of preference
+      let img = null;
+      
+      // Option 1: Instagram's post image container classes
+      img = post.querySelector('div._aagu._aa20 div._aagv img');
+      
+      // Option 2: Image with "Photo by" alt text pattern
+      if (!img) {
+        img = post.querySelector('img[alt^="Photo by"]');
+      }
+      
+      // Option 3: First image that doesn't have "profile picture" in alt
+      if (!img) {
+        const allImages = post.querySelectorAll('img');
+        img = Array.from(allImages).find(img => 
+          !img.alt.includes('profile picture') && 
+          img.src &&
+          img.width > 100 // Skip small avatars/icons
+        );
+      }
+      
       const imageUrl = img ? img.src : null;
       
-      const captionElement = post.querySelector('span[class*="_ap3a"]') || 
-                           post.querySelector('h1[class*="_ap3a"]');
-      const caption = captionElement ? captionElement.innerText : '';
+      // Try multiple caption selectors
+      let caption = '';
+      
+      // Option 1: Caption span with specific classes (_aacu marks caption text)
+      const captionEl = post.querySelector('span._ap3a._aacu');
+      if (captionEl) {
+        caption = captionEl.textContent.trim();
+      }
+      
+      // Option 2: All caption spans and filter by content
+      if (!caption) {
+        const spans = post.querySelectorAll('span._ap3a');
+        for (const span of spans) {
+          const text = span.textContent.trim();
+          // Skip if it's likely a username, location, or time
+          if (text && 
+              !span.closest('a[href*="/explore/locations/"]') && // Not location
+              !span.closest('time') && // Not timestamp
+              text.length > 5 && // Not just a username
+              !text.match(/^\d+\s*(likes?|others?)$/i) // Not like count
+          ) {
+            caption = text;
+            break;
+          }
+        }
+      }
       
       return { 
         element: post,
