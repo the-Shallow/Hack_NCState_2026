@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "version": "1.0.0",
+  "name": "AIBot",
+  "description": "Your new AI Bot",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "action": {},
+  "icons": {},
+  "background": {
+    "service_worker": "script.js"
+  }
+}
