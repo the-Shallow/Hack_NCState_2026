@@ -15,5 +15,11 @@
       "js": ["script.js"],
       "run_at": "document_idle"
     }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["crime-scene.png"],
+      "matches": ["https://www.instagram.com/*"]
+    }
   ]
 }

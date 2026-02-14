@@ -2,6 +2,7 @@
   const postCache = new Map();
   const removedPostUrls = new Set();
   const processedPostUrls = new Set();
+  const originalPostContent = new Map();
   let totalRemovedCount = 0;
   
   // Default threshold values
@@ -163,48 +164,70 @@
     }
   }
   
-  function getPlaceholderHTML() {
+  function getPlaceholderHTML(postId) {
     return `
-      <div class="aibot-placeholder" style="
-        background: linear-gradient(135deg, rgba(20, 20, 20, 0.95) 0%, rgba(40, 40, 40, 0.95) 100%);
-        min-height: 400px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 40px 20px;
-        text-align: center;
+      <div class="aibot-placeholder" data-post-id="${postId}" style="
+        background-image: url('${chrome.runtime.getURL('crime-scene.png')}');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        height: 400px;
         border-radius: 8px;
         margin: 8px 0;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        position: relative;
+        overflow: hidden;
       ">
-        <div style="
-          font-size: 48px;
-          margin-bottom: 16px;
-          filter: grayscale(100%) brightness(200%);
-        ">🤖</div>
-        <h3 style="
-          color: #e0e0e0;
-          font-size: 18px;
+        <button class="aibot-show-btn" style="
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          padding: 8px 16px;
+          background: #4dabf7;
+          color: white;
+          border: none;
+          border-radius: 20px;
+          font-size: 13px;
           font-weight: 600;
-          margin-bottom: 8px;
+          cursor: pointer;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        ">AI Generated Content</h3>
-        <p style="
-          color: #888;
-          font-size: 14px;
-          margin: 0;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        ">Removed by AIBot</p>
+          transition: background 0.2s;
+          z-index: 100;
+        " onmouseover="this.style.background='#339af0'" onmouseout="this.style.background='#4dabf7'">Show Post</button>
         <div style="
-          margin-top: 16px;
-          padding: 6px 12px;
-          background: rgba(77, 171, 247, 0.2);
-          border-radius: 12px;
-          font-size: 11px;
-          color: #4dabf7;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        ">Filtered</div>
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(
+            to bottom,
+            rgba(0, 0, 0, 0.4) 0%,
+            rgba(0, 0, 0, 0.65) 40%,
+            rgba(0, 0, 0, 0.65) 100%
+          );
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 40px 20px;
+          text-align: center;
+        ">
+          <div style="
+            font-size: 48px;
+            margin-bottom: 16px;
+            filter: grayscale(100%) brightness(200%);
+          ">🤖</div>
+          <h3 style="
+            color: #e0e0e0;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          ">AI Generated Content</h3>
+          <p style="
+            color: #888;
+            font-size: 14px;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          ">Removed by AIBot</p>
+        </div>
       </div>
     `;
   }
@@ -213,11 +236,22 @@
     if (post.element && post.imageUrl) {
       removedPostUrls.add(post.imageUrl);
       
+      // Store original content before replacing
+      originalPostContent.set(post.imageUrl, post.element.innerHTML);
+      
       // Replace post content with placeholder while keeping the article element
-      post.element.innerHTML = getPlaceholderHTML();
-      post.element.style.pointerEvents = 'none';
+      post.element.innerHTML = getPlaceholderHTML(post.imageUrl);
       post.element.setAttribute('data-aibot-processed', 'true');
       post.element.setAttribute('data-aibot-removed', 'true');
+      
+      // Add click handler to show button
+      const showBtn = post.element.querySelector('.aibot-show-btn');
+      if (showBtn) {
+        showBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          showHiddenPost(post.element, post.imageUrl);
+        });
+      }
       
       // Persist to storage
       chrome.storage.sync.set({ 
@@ -228,9 +262,60 @@
     }
   }
   
+  function showHiddenPost(element, imageUrl) {
+    const originalContent = originalPostContent.get(imageUrl);
+    if (originalContent && element) {
+      // Restore original content
+      element.innerHTML = originalContent;
+      element.setAttribute('data-aibot-temp-visible', 'true');
+      element.removeAttribute('data-aibot-removed');
+      
+      console.log('[AIBot Extension] Temporarily showing post:', imageUrl.substring(0, 50) + '...');
+    }
+  }
+  
+  function rehideTempVisiblePosts() {
+    const tempVisiblePosts = document.querySelectorAll('article[data-aibot-temp-visible]');
+    tempVisiblePosts.forEach(post => {
+      // Find the image URL from the restored content
+      let img = post.querySelector('div._aagu._aa20 div._aagv img') ||
+                post.querySelector('img[alt^="Photo by"]');
+      
+      if (!img) {
+        const allImages = post.querySelectorAll('img');
+        img = Array.from(allImages).find(img => 
+          !img.alt.includes('profile picture') && 
+          img.src &&
+          img.width > 100
+        );
+      }
+      
+      const imageUrl = img ? img.src : null;
+      
+      if (imageUrl && originalPostContent.has(imageUrl)) {
+        // Replace with placeholder again
+        post.innerHTML = getPlaceholderHTML(imageUrl);
+        post.setAttribute('data-aibot-removed', 'true');
+        post.removeAttribute('data-aibot-temp-visible');
+        
+        // Re-attach click handler
+        const showBtn = post.querySelector('.aibot-show-btn');
+        if (showBtn) {
+          showBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showHiddenPost(post, imageUrl);
+          });
+        }
+        
+        console.log('[AIBot Extension] Re-hidden post after scroll:', imageUrl.substring(0, 50) + '...');
+      }
+    });
+  }
+  
   function processSinglePost(postElement) {
-    // Skip if already processed
+    // Early return - skip if already processed, removed, or has placeholder
     if (postElement.hasAttribute('data-aibot-processed') || 
+        postElement.hasAttribute('data-aibot-removed') ||
         postElement.querySelector('.aibot-placeholder')) {
       return;
     }
@@ -260,10 +345,24 @@
     
     // Check if this URL should be hidden immediately
     if (removedPostUrls.has(imageUrl)) {
-      postElement.innerHTML = getPlaceholderHTML();
-      postElement.style.pointerEvents = 'none';
+      // Store original content if not already stored
+      if (!originalPostContent.has(imageUrl)) {
+        originalPostContent.set(imageUrl, postElement.innerHTML);
+      }
+      
+      postElement.innerHTML = getPlaceholderHTML(imageUrl);
       postElement.setAttribute('data-aibot-processed', 'true');
       postElement.setAttribute('data-aibot-removed', 'true');
+      
+      // Add click handler to show button
+      const showBtn = postElement.querySelector('.aibot-show-btn');
+      if (showBtn) {
+        showBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          showHiddenPost(postElement, imageUrl);
+        });
+      }
+      
       console.log('[AIBot Extension] Immediately re-hidden known post:', imageUrl.substring(0, 50) + '...');
       return;
     }
@@ -273,10 +372,25 @@
     if (cachedResult) {
       if (cachedResult.shouldHide) {
         removedPostUrls.add(imageUrl);
-        postElement.innerHTML = getPlaceholderHTML();
-        postElement.style.pointerEvents = 'none';
+        
+        // Store original content before replacing
+        if (!originalPostContent.has(imageUrl)) {
+          originalPostContent.set(imageUrl, postElement.innerHTML);
+        }
+        
+        postElement.innerHTML = getPlaceholderHTML(imageUrl);
         postElement.setAttribute('data-aibot-processed', 'true');
         postElement.setAttribute('data-aibot-removed', 'true');
+        
+        // Add click handler to show button
+        const showBtn = postElement.querySelector('.aibot-show-btn');
+        if (showBtn) {
+          showBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showHiddenPost(postElement, imageUrl);
+          });
+        }
+        
         chrome.storage.sync.set({ 
           removedPostUrls: Array.from(removedPostUrls)
         });
@@ -332,6 +446,8 @@
   window.addEventListener('scroll', () => {
     clearTimeout(scrollTimeout);
     scrollTimeout = setTimeout(() => {
+      // Re-hide any temporarily visible posts
+      rehideTempVisiblePosts();
       processPosts();
     }, SCROLL_DEBOUNCE_MS);
   });
