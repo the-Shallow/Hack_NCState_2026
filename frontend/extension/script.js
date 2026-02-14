@@ -73,6 +73,7 @@
       }
       
       const imageUrl = img ? img.src : null;
+      const imageAlt = img ? img.alt : null;
       
       let caption = '';
       
@@ -100,6 +101,7 @@
       return { 
         element: post,
         imageUrl, 
+        imageAlt,
         caption: caption.substring(0, 100) + (caption.length > 100 ? '...' : '')
       };
     }).filter(post => post && post.imageUrl);
