@@ -25,6 +25,7 @@
         caption: caption.substring(0, 100) + (caption.length > 100 ? '...' : '')
       };
     }).filter(post => post.imageUrl);
+
     
     console.log('[AIBot Extension] Mapped posts:', mappedPosts);
     return mappedPosts;
