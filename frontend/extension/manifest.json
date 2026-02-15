@@ -8,7 +8,7 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "host_permissions": ["https://www.instagram.com/*", "http://localhost:8000/*"],
+  "host_permissions": ["https://www.instagram.com/*", "https://hack-ncstate-2026.onrender.com/*"],
   "action": {
     "default_popup": "popup.html"
   },

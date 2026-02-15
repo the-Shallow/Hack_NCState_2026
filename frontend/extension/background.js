@@ -8,7 +8,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 async function analyzeImages(payload) {
-  const resp = await fetch("http://localhost:8000/api/analyze_claims", {
+  console.log("=== SENDING FETCH REQUEST ===");
+  console.log("URL:", "https://hack-ncstate-2026.onrender.com/api/analyze_claims");
+  console.log("Payload:", payload);
+  console.log("============================");
+  
+  const resp = await fetch("https://hack-ncstate-2026.onrender.com/api/analyze_claims", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
