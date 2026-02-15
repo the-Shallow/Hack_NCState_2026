@@ -137,6 +137,7 @@
     const shouldHideProper =
       aiGeneratedScore >= AI_GENERATED_THRESHOLD || newsScore >= NEWS_THRESHOLD;
     console.log("SHOULD HIDE PROPER: ", shouldHideProper);
+    return shouldHideProper
   }
 
   // async function mockBackendRequest(imageUrls) {
