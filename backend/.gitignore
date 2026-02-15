@@ -1,0 +1,58 @@
+# =========================
+# IDE
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# PYTHON BACKEND
+# =========================
+
+# Virtual Environment
+backend/.venv/
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+backend/app/**/__pycache__/
+
+# Environment files
+backend/app/.env
+.env
+.env.*
+
+# Logs
+*.log
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# =========================
+# DATABASE FILES
+# =========================
+*.sqlite3
+*.db
+
+# =========================
+# ML / MODELS
+# =========================
+*.pt
+*.pth
+*.onnx
+
+# =========================
+# FRONTEND
+# =========================
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
