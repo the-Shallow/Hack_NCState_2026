@@ -104,25 +104,73 @@
         imageAlt,
         caption: caption.substring(0, 100) + (caption.length > 100 ? '...' : '')
       };
-    }).filter(post => post && post.imageUrl);
+    })
 
     console.log('[AIBot Extension] Mapped posts:', mappedPosts);
     return mappedPosts;
   }
   
   function shouldHidePost(aiGeneratedScore, newsScore) {
+    // console.log(`[AIBot Extension] Evaluating post - AI Score: ${aiGeneratedScore}, News Score: ${newsScore}`);
+    console.log(aiGeneratedScore > AI_GENERATED_THRESHOLD || newsScore > NEWS_THRESHOLD)
     return aiGeneratedScore > AI_GENERATED_THRESHOLD || newsScore > NEWS_THRESHOLD;
   }
   
-  async function mockBackendRequest(imageUrls) {
-    console.log(`[AIBot Extension] Sending ${imageUrls.length} images to backend`);
-    await new Promise(resolve => setTimeout(resolve, 100));
-    return imageUrls.map(imageUrl => ({
-      imageUrl,
-      aiGeneratedScore: Math.floor(Math.random() * 10),
-      newsScore: Math.floor(Math.random() * 10)
-    }));
-  }
+  // async function mockBackendRequest(imageUrls) {
+  //   console.log(`[AIBot Extension] Sending ${imageUrls.length} images to backend`);
+  //   await new Promise(resolve => setTimeout(resolve, 100));
+  //   return imageUrls.map(imageUrl => ({
+  //     imageUrl,
+  //     aiGeneratedScore: Math.floor(Math.random() * 10),
+  //     newsScore: Math.floor(Math.random() * 10)
+  //   }));
+  // }
+
+  async function sendToBackend(claimInputPayload) {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(
+      { type: "ANALYZE_IMAGES", payload: claimInputPayload },
+      (response) => {
+        const err = chrome.runtime.lastError;
+        if (err) return reject(err);
+        if (!response?.ok) return reject(new Error(response?.error || "Unknown error"));
+        resolve(response.result);
+      }
+    );
+  });
+}
+
+
+  async function mockBackendRequest(posts) {
+    image_array = []
+    for (const post of posts) {
+      const img = post.imageUrl;
+      console.log("Sending to backend:", img);
+
+    
+  const payload = {url:img,
+    caption:post.caption,
+    alt_text:post.imageAlt
+};
+
+console.log("Payload for backend:", payload);
+
+  const data = await sendToBackend(payload);
+
+  // map to the shape frontend expects
+  image_array.push({
+    imageUrls:img,
+    aiGeneratedScore: Math.round((data.ai_generated_risk_score ?? 0) * 10),
+    newsScore: Math.round((data.misinformation_risk_score ?? 0) * 10),
+    verdict: data.verdict,
+    confidence: data.confidence
+  })
+}
+
+return image_array
+}
+
+
   
   async function processPosts() {
     console.log('[AIBot Extension] Processing posts...');
@@ -135,9 +183,9 @@
     console.log(`[AIBot Extension] ${uncachedPosts.length} uncached posts`);
     
     if (uncachedPosts.length > 0) {
-      const imageUrls = uncachedPosts.map(post => post.imageUrl);
-      const results = await mockBackendRequest(imageUrls);
-
+      // const imageUrls = uncachedPosts.map(post => post.imageUrl);
+      const results = await mockBackendRequest(uncachedPosts);
+      console.log('[AIBot Extension] Received backend results:', results);
       results.forEach(result => {
         postCache.set(result.imageUrl, {
           aiGeneratedScore: result.aiGeneratedScore,
@@ -152,6 +200,7 @@
     let newlyRemoved = 0;
     newPosts.forEach(post => {
       const cachedResult = postCache.get(post.imageUrl);
+      console.log(cachedResult && cachedResult.shouldHide)
       if (cachedResult && cachedResult.shouldHide) {
         removePost(post);
         newlyRemoved++;
@@ -259,7 +308,6 @@
       chrome.storage.sync.set({ 
         removedPostUrls: Array.from(removedPostUrls)
       });
-      
       console.log('[AIBot Extension] Replaced post with placeholder:', post.imageUrl.substring(0, 50) + '...');
     }
   }
