@@ -10,6 +10,7 @@ def _domain(u: str) -> str:
 
 class CredibilityTool:
     def __init__(self,  client: BackboardClient, model_name: str ="gpt-4o"):
+        print("Initializing CredibilityTool...")
         self.client = client
         self.model_name = model_name
         self.assistant_id: Optional[str] = None

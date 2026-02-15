@@ -2,7 +2,8 @@ import json
 import re
 from typing import Any, Dict, List, Optional
 import requests
-
+import os
+import httpx
 from backboard import BackboardClient
 from app.agents.prompts import WEB_SEARCH_TOOL_PROMPT
 
@@ -40,6 +41,49 @@ def ddg_search(query:str, top_k:int=5):
         results.append({"url": url, "title": title, "snippet": snippet})
     return results
 
+
+BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search"
+
+async def brave_search(query: str, top_k: int = 5) -> List[Dict[str, str]]:
+    api_key = os.getenv("BRAVE_API_KEY")
+    if not api_key:
+        raise RuntimeError("Missing BRAVE_API_KEY env var")
+
+    headers = {
+        "Accept": "application/json",
+        "X-Subscription-Token": api_key,
+        "User-Agent": _UA,
+    }
+    params = {
+        "q": query,
+        "count": min(top_k, 10),  # Brave supports up to 20; keep small for cost
+        "safesearch": "moderate",
+        # optional knobs:
+        # "country": "US",
+        # "search_lang": "en",
+        # "freshness": "week",  # day|week|month|year
+    }
+
+    async with httpx.AsyncClient(timeout=12.0) as client:
+        r = await client.get(BRAVE_SEARCH_URL, headers=headers, params=params)
+
+    print("Brave status:", r.status_code, "query:", query)
+    # Don’t crash your whole pipeline on rate limit; return empty gracefully
+    if r.status_code == 429:
+        return []
+
+    r.raise_for_status()
+    data = r.json()
+
+    items = []
+    # Brave’s results usually live under: data["web"]["results"]
+    for res in (data.get("web", {}) or {}).get("results", [])[:top_k]:
+        url = res.get("url")
+        title = res.get("title") or ""
+        snippet = res.get("description") or ""
+        if url:
+            items.append({"url": url, "title": title, "snippet": snippet})
+    return items
 
 class WebSearchTool:
     def __init__(self, client: BackboardClient, model_name:str = "gpt-4o"):
@@ -96,7 +140,7 @@ class WebSearchTool:
         queries = queries[:2]
         merged:Dict[str, Dict[str,str]] = {}
         for q in queries:
-            for item in ddg_search(q,top_k=top_k):
+            for item in await brave_search(q, top_k=top_k):
                 merged[item["url"]] = item
         
         results = list(merged.values())
@@ -113,10 +157,13 @@ class WebSearchTool:
             model_name=self.model_name
         )
 
+        print(f"Selection response: {resp2}")
+
         selection = json.loads(resp2.content) if isinstance(resp2.content, str) else resp2.content
 
         selection["queries"] = queries
         selection.setdefault("notes", [])
         selection["notes"].append(f"retrieved_results={len(results)}")
+        print(f"Final selection: {selection}")
         return selection
 

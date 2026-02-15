@@ -14,22 +14,8 @@ def get_tool_definitions():
         {
             "type": "function",
             "function": {
-                "name": "numeric_verify",
-                "description": "Extract and sanity check numeric assertions in a claim. returns flags and a suspiciousness score.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "claim_text": {"type": "string", "description": "Claim text to check."}
-                    },
-                    "required": ["claim_text"]
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
                 "name": "web_search_llm",
-                "description": "LLM-assisted web search: generates queries, retrieves results, selects best evidence candidates from snippets.",
+                "description": "LLM-assisted web search: generates queries to search on web, retrieves results, selects best evidence candidates from snippets.",
                 "parameters": {
                 "type": "object",
                 "properties": {

@@ -27,6 +27,7 @@ def extract_evidence_items_tools_output(
 
     if tool_name == "web_search_llm":
         selected = tool_output.get("selected", []) or []
+        print(f"Extracting evidence from web_search_llm output, selected items: {selected}")
         for item in selected:
             evidence.append(
                 {
@@ -34,11 +35,12 @@ def extract_evidence_items_tools_output(
                     "source_url": item.get("url"),
                     "source_credibility": None,  # filled later via credibility tool
                     "title": item.get("title"),
-                    "retrieved_at": _now_iso(),
+                    # "retrieved_at": _now_iso(),
                     "summary": item.get("evidence_summary") or item.get("snippet") or "",
                     "supporting": True,  # unknown polarity at search stage; synthesis can reinterpret
                 }
             )
+        return evidence
     elif tool_name == "credibility_llm":
         # expected: {"items":[{url,domain,tier,rationale,signals}]}
         # This tool doesn't create evidence; it annotates credibility.
@@ -65,8 +67,28 @@ def _apply_credibility_to_evidence(
             ev["source_credibility"] = tier_by_url[str(u)]
     return evidence
 
+def _tc_id(tc):
+    return tc.get("id") if isinstance(tc, dict) else tc.id
+
+def _tc_name(tc):
+    if isinstance(tc, dict):
+        return (tc.get("function") or {}).get("name")
+    return tc.function.name
+
+def _tc_args_str(tc):
+    if isinstance(tc, dict):
+        return (tc.get("function") or {}).get("arguments") or "{}"
+    return tc.function.arguments
+
+def _tc_parsed_args(tc):
+    # Some SDKs provide parsed arguments; dict format usually doesn't.
+    if not isinstance(tc, dict):
+        return getattr(tc.function, "parsed_arguments", None)
+    return None
+
+
 class BackboardAgent:
-    def __init__(self, api_key:str, model_name:str = "gpt-4o"):
+    def __init__(self, api_key:str, model_name:str = "gpt-5-mini"):
         self.client = BackboardClient(api_key=api_key)
         self.model_name = model_name
 
@@ -123,22 +145,32 @@ class BackboardAgent:
             outputs = []
 
             for tc in resp.tool_calls:
-                fn_name = tc.function.name
-                print(f"Tool call: {fn_name} with arguments: {tc.function.arguments}")
-                if fn_name not in tool_registry:
-                    out = {"error": f"Tool {fn_name} not found"}
-                else:
-                    args = getattr(tc.function,  "parsed_arguments", None)
+                # fn_name = tc.function.name
+                fn_name = _tc_name(tc)
+                args_str = _tc_args_str(tc)
+                print(f"Tool call: {fn_name} with arguments: {args_str}")
+                
+                # if fn_name not in tool_registry:
+                #     out = {"error": f"Tool {fn_name} not found"}
+                # else:
+                #     args = getattr(tc.function,  "parsed_arguments", None)
 
-                    if args is None:
-                        args = json.loads(tc.function.arguments)
+                if fn_name is None:
+                    out = {"error": "Malformed tool call: missing function.name"}
+                    tool_call_id = _tc_id(tc)
+                    outputs.append({"tool_call_id": tool_call_id, "output": json.dumps(out)})
+                    continue
 
-                    claim_id_hint = args.get("claim_id") if isinstance(args, dict) else None
-                    
-                    try:
-                        out = await tool_registry[fn_name](args)
-                    except Exception as e:
-                        out = {"error": f"Tool {fn_name} execution error"}
+                args = _tc_parsed_args(tc)
+                if args is None:
+                    args = json.loads(args_str)
+
+                claim_id_hint = args.get("claim_id") if isinstance(args, dict) else None
+                
+                try:
+                    out = await tool_registry[fn_name](args)
+                except Exception as e:
+                    out = {"error": f"Tool {fn_name} execution error"}
 
                 out_dict = _safe_json_load(out)
                 if fn_name == "credibility_llm":
@@ -152,7 +184,7 @@ class BackboardAgent:
                         )
                     )
                 outputs.append({
-                    "tool_call_id": tc.id,
+                    "tool_call_id":  _tc_id(tc),
                     "output": json.dumps(out)
                 })
 
