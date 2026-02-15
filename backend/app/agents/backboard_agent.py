@@ -88,7 +88,7 @@ def _tc_parsed_args(tc):
 
 
 class BackboardAgent:
-    def __init__(self, api_key:str, model_name:str = "gpt-5-mini"):
+    def __init__(self, api_key:str, model_name:str = "gemini-2.5-flash"):
         self.client = BackboardClient(api_key=api_key)
         self.model_name = model_name
 

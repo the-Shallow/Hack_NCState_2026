@@ -199,7 +199,7 @@ def extract_post_text_for_llm(
     }
 
 
-def main() -> None:
+def get_image_data() -> None:
     parser = argparse.ArgumentParser(
         description="Extract OCR text from a social post for LLM parsing."
     )
@@ -222,8 +222,4 @@ def main() -> None:
         max_images=args.max_images,
         ocr_profile=args.ocr_profile,
     )
-    print(json.dumps(result, indent=2, ensure_ascii=False))
-
-
-if __name__ == "__main__":
-    main()
+    return json.dumps(result, indent=2, ensure_ascii=False)
