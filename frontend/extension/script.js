@@ -6,8 +6,8 @@
   let totalRemovedCount = 0;
 
   // Default threshold values (0.0-1.0 scale)
-  let AI_GENERATED_THRESHOLD = 0.7;
-  let NEWS_THRESHOLD = 0.5;
+  let AI_GENERATED_THRESHOLD = 0.3;
+  let NEWS_THRESHOLD = 0.2;
   const SCROLL_DEBOUNCE_MS = 200;
 
   // DEBUG: console.log("[AIBot Extension] Content script loaded on Instagram");
@@ -134,9 +134,9 @@
     // DEBUG: console.log(
     //   aiGeneratedScore > AI_GENERATED_THRESHOLD || newsScore > NEWS_THRESHOLD,
     // );
-    return (
-      aiGeneratedScore > AI_GENERATED_THRESHOLD || newsScore > NEWS_THRESHOLD
-    );
+    const shouldHideProper =
+      aiGeneratedScore >= AI_GENERATED_THRESHOLD || newsScore >= NEWS_THRESHOLD;
+    console.log("SHOULD HIDE PROPER: ", shouldHideProper);
   }
 
   // async function mockBackendRequest(imageUrls) {
@@ -192,29 +192,30 @@
           caption: post.caption || "",
           alt_text: post.imageAlt || "",
           metadata: {},
-          max_images: 3
+          max_images: 3,
         };
-        
+
         // Mark URL as in-flight before making request
         inFlightUrls.add(post.imageUrl);
-        
+
         try {
           const result = await sendToBackend(payload);
-          // DEBUG: console.log("[AIBot Extension] Received API result:");
-          // DEBUG: console.log(result)
-          
+          console.log("[AIBot Extension] Received API result:");
+          console.log(result);
+
           // Extract scores from AgentOutput response
           // API returns ai_generated_risk_score and misinformation_risk_score as 0.0-1.0 decimals
           const aiGeneratedScore = result.ai_generated_risk_score ?? 0;
           const newsScore = result.misinformation_risk_score ?? 0;
-          
-          postCache.set(post.imageUrl, {
+          const hideResult = {
             aiGeneratedScore: aiGeneratedScore,
             newsScore: newsScore,
             shouldHide: shouldHidePost(aiGeneratedScore, newsScore),
-          });
+          };
+          postCache.set(post.imageUrl, hideResult);
+          console.log(hideResult);
         } catch (err) {
-          // DEBUG: console.error("[AIBot Extension] API call failed:", err);
+          console.error("[AIBot Extension] API call failed:", err);
           // Cache with default values to avoid repeated failed calls (0.0-1.0 scale)
           postCache.set(post.imageUrl, {
             aiGeneratedScore: 0.5,

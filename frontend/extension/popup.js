@@ -20,12 +20,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     chrome.storage.sync.get(['aiGeneratedThreshold', 'newsThreshold', 'hiddenCount'], (data) => {
       if (data.aiGeneratedThreshold !== undefined) {
-        aiThresholdInput.value = data.aiGeneratedThreshold;
-        aiThresholdValue.textContent = data.aiGeneratedThreshold;
+        aiThresholdInput.value = data.aiGeneratedThreshold * 10;
+        aiThresholdValue.textContent = Math.round(data.aiGeneratedThreshold * 10);
       }
       if (data.newsThreshold !== undefined) {
-        newsThresholdInput.value = data.newsThreshold;
-        newsThresholdValue.textContent = data.newsThreshold;
+        newsThresholdInput.value = data.newsThreshold * 10;
+        newsThresholdValue.textContent = Math.round(data.newsThreshold * 10);
       }
       if (data.hiddenCount !== undefined) {
         hiddenCountElement.textContent = data.hiddenCount;
@@ -41,13 +41,13 @@ document.addEventListener('DOMContentLoaded', () => {
     aiThresholdInput.addEventListener('input', (e) => {
       const value = parseInt(e.target.value);
       aiThresholdValue.textContent = value;
-      chrome.storage.sync.set({ aiGeneratedThreshold: value });
+      chrome.storage.sync.set({ aiGeneratedThreshold: value / 10 });
     });
 
     newsThresholdInput.addEventListener('input', (e) => {
       const value = parseInt(e.target.value);
       newsThresholdValue.textContent = value;
-      chrome.storage.sync.set({ newsThreshold: value });
+      chrome.storage.sync.set({ newsThreshold: value / 10 });
     });
   });
 });
