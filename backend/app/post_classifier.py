@@ -2,7 +2,6 @@ import argparse
 import io
 import json
 import re
-from dataclasses import asdict, dataclass
 from typing import List
 from urllib.parse import urljoin, urlparse
 
@@ -15,17 +14,6 @@ USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
 )
-
-
-@dataclass
-class ExtractedTextResult:
-    url: str
-    caption: str
-    include_caption: bool
-    ocr_text: str
-    llm_input_text: str
-    image_urls: List[str]
-    ocr_errors: List[str]
 
 
 def _session() -> requests.Session:
@@ -193,28 +181,22 @@ def _extract_ocr_text(image_urls: List[str], ocr_profile: str) -> tuple[str, Lis
 def extract_post_text_for_llm(
     post_url: str,
     caption: str = "",
-    include_caption: bool = False,
+    alt_text: str = "",
     max_images: int = 3,
     ocr_profile: str = "fast",
-) -> ExtractedTextResult:
+) -> dict[str, str]:
     if ocr_profile not in {"fast", "accurate"}:
         raise ValueError("ocr_profile must be either 'fast' or 'accurate'")
     image_urls = _extract_image_urls(post_url, max_images=max_images)
-    ocr_text, ocr_errors = _extract_ocr_text(image_urls, ocr_profile=ocr_profile)
-    if include_caption and caption.strip():
-        llm_input_text = "\n\n".join([caption.strip(), ocr_text.strip()]).strip()
-    else:
-        llm_input_text = ocr_text.strip()
+    ocr_text, _ = _extract_ocr_text(image_urls, ocr_profile=ocr_profile)
+    llm_input_parts = [caption.strip(), alt_text.strip(), ocr_text.strip()]
+    llm_input_text = "\n\n".join(part for part in llm_input_parts if part)
 
-    return ExtractedTextResult(
-        url=post_url,
-        caption=caption,
-        include_caption=include_caption,
-        ocr_text=ocr_text,
-        llm_input_text=llm_input_text,
-        image_urls=image_urls,
-        ocr_errors=ocr_errors,
-    )
+    return {
+        "llm-input-text": llm_input_text,
+        "caption": caption,
+        "alt-text": alt_text,
+    }
 
 
 def main() -> None:
@@ -222,12 +204,8 @@ def main() -> None:
         description="Extract OCR text from a social post for LLM parsing."
     )
     parser.add_argument("--url", required=True, help="Post URL or direct image URL")
-    parser.add_argument("--caption", default="", help="Optional post caption text")
-    parser.add_argument(
-        "--include-caption",
-        action="store_true",
-        help="Append caption to OCR text in llm_input_text",
-    )
+    parser.add_argument("--caption", default="", help="Post caption text")
+    parser.add_argument("--alt-text", default="", help="Post alt-text")
     parser.add_argument("--max-images", type=int, default=3, help="Max images to OCR")
     parser.add_argument(
         "--ocr-profile",
@@ -240,11 +218,11 @@ def main() -> None:
     result = extract_post_text_for_llm(
         post_url=args.url,
         caption=args.caption,
-        include_caption=args.include_caption,
+        alt_text=args.alt_text,
         max_images=args.max_images,
         ocr_profile=args.ocr_profile,
     )
-    print(json.dumps(asdict(result), indent=2, ensure_ascii=False))
+    print(json.dumps(result, indent=2, ensure_ascii=False))
 
 
 if __name__ == "__main__":
